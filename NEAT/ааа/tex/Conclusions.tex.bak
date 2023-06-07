@@ -1,0 +1,98 @@
+\section{Программный код}
+В рамках практической работы был разработан программный код с применением модуля PyTorch для реализации нейроэволюционного алгоритма NEAT. Программный код был разработан на языке Python.
+
+% add program code abd color it
+\begin{lstlisting}[style=pythonstyle, caption={Программный код реализации алгоритма NEAT с применением модуля PyTorch}, label={lst:pythoncode}]
+	import torch
+	import torch.nn as nn
+	import torch.optim as optim
+	from torchvision.datasets import MNIST
+	from torch.utils.data import DataLoader
+	from torchvision.transforms import ToTensor
+	import neat
+	
+	# Define the PyTorch-based neural network class
+	class NeuralNetwork(nn.Module):
+		def __init__(self, input_size, output_size):
+			super(NeuralNetwork, self).__init__()
+			self.fc = nn.Linear(input_size, 64)
+			self.relu = nn.ReLU()
+			self.out = nn.Linear(64, output_size)
+	
+		def forward(self, x):
+			x = self.fc(x)
+			x = self.relu(x)
+			x = self.out(x)
+			return x
+	
+	# Define the fitness evaluation function
+	def eval_fitness(genomes, config):
+		for genome_id, genome in genomes:
+			net = neat.nn.FeedForwardNetwork.create(genome, config)
+			criterion = nn.CrossEntropyLoss()
+			optimizer = optim.Adam(net.parameters(), lr=0.01)
+			for batch_images, batch_labels in train_loader:
+				batch_images = batch_images.cuda()
+				batch_labels = batch_labels.cuda()
+	
+				optimizer.zero_grad()
+				outputs = net.activate(batch_images.view(batch_images.size(0), -1))
+				loss = criterion(outputs, batch_labels)
+				loss.backward()
+				optimizer.step()
+			
+			# Evaluate the fitness
+			correct = 0
+			total = 0
+			for test_images, test_labels in test_loader:
+				test_images = test_images.cuda()
+				test_labels = test_labels.cuda()
+				
+				outputs = net.activate(test_images.view(test_images.size(0), -1))
+				_, predicted = torch.max(outputs.data, 1)
+				total += test_labels.size(0)
+				correct += (predicted == test_labels).sum().item()
+			
+			accuracy = correct / total
+			genome.fitness = accuracy
+	
+	# Load MNIST dataset
+	train_dataset = MNIST(root='./data', train=True, transform=ToTensor(), download=True)
+	train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+	test_dataset = MNIST(root='./data', train=False, transform=ToTensor(), download=True)
+	test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
+	
+	# Configure NEAT
+	config_path = 'neat-config-file.cfg'  # Specify the path to your NEAT configuration file
+	config = neat.config.Config(neat.DefaultGenome, neat.DefaultReproduction, neat.DefaultSpeciesSet,
+								neat.DefaultStagnation, config_path)
+	
+	# Create the population
+	population = neat.Population(config)
+	
+	# Add a reporter to display the progress during evolution
+	reporter = neat.StdOutReporter(True)
+	population.add_reporter(reporter)
+	
+	# Run NEAT
+	best_genome = population.run(eval_fitness, 100)
+	
+	# Retrieve the best neural network from the evolved population
+	best_net = neat.nn.FeedForwardNetwork.create(best_genome, config)
+	
+	# Test the best neural network
+	with torch.no_grad():
+		correct = 0
+		total = 0
+		for test_images, test_labels in test_loader:
+			test_images = test_images.cuda()
+			test_labels = test_labels.cuda()
+			
+			outputs = best_net.activate(test_images.view(test_images.size(0), -1))
+			_, predicted = torch.max(outputs.data, 1)
+			total += test_labels.size(0)
+			correct += (predicted == test_labels).sum().item()
+		
+		accuracy = correct / total
+		print("Accuracy of the best network: {:.2f}%".format(accuracy * 100))
+\end{lstlisting}

@@ -1,0 +1,13 @@
+\begin{thebibliography}{1}
+\newcommand{\enquote}[1]{``#1''}
+
+\bibitem{Kaggle_dataset}
+\enquote{Pima Indians Diabetes Database,} {\em Kaggle\/}, May 2023,
+  https://www.kaggle.com/datasets/uciml/pima-indians-diabetes-database.
+
+\bibitem{Stanley_NEAT}
+Kenneth O.~Stanley, R.~M., \enquote{Evolving Neural Networks through Augmenting
+  Topologies,} {\em Evolutionary Computation 10 by Massachusetts Institue of
+  Technology\/}, Vol.~2, February 2002, pp.~99--127.
+
+\end{thebibliography}

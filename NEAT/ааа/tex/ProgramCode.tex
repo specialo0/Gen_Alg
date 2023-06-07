@@ -1,0 +1,171 @@
+\section{Программный код}
+В рамках данной работы был разработан программный код с применением модуля neat-python для реализации нейроэволюционного алгоритма NEAT. Программный код был разработан на языке Python.
+
+% add program code abd color it
+\begin{lstlisting}[style=pythonstyle, caption={Программный код реализации алгоритма NEAT с применением модуля neat-python}, label={lst:pythoncode}]
+import networkx as nx
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+import pandas as pd
+import neat
+import my_visualize as visualize
+import numpy as np
+import pickle
+
+dataset = pd.read_csv('diabetes.csv', header=None, sep=',', engine='python')
+dataset = dataset.drop([0])
+dataset = dataset.astype(float)
+inputs = dataset.iloc[:, 0:8].values
+outputs = dataset.iloc[:, 8].values
+inputs = np.array(inputs)
+outputs = np.array(outputs)
+config_path = 'config-diabetis'
+config = neat.Config(neat.DefaultGenome, neat.DefaultReproduction,
+                         neat.DefaultSpeciesSet, neat.DefaultStagnation,
+                         config_path)
+
+def eval_genomes(genomes,config):
+    '''
+    evaluate genomes
+    '''
+    for genome_id, genome in genomes:
+        genome.fitness = len(inputs)
+        net = neat.nn.FeedForwardNetwork.create(genome, config)
+        for xi, xo in zip(inputs, outputs):
+            output = net.activate(xi)
+            #use threshold
+            output = 1 if output[0] > 0.5 else 0
+            genome.fitness -= (output - xo) ** 2
+
+def plot_the_graph(winner):
+    '''
+    plot the graph of the winner
+    '''
+    list_of_nodes = []
+    for node in winner.connections.values():
+        temp = []
+        for neuron in node.key:
+            temp.append(neuron)
+        temp.append(node.weight)
+        list_of_nodes.append(temp)
+    
+    unique_nodes = []
+    for node in list_of_nodes:
+        if node[0] not in unique_nodes:
+            unique_nodes.append(node[0])
+        if node[1] not in unique_nodes:
+            unique_nodes.append(node[1])
+    
+    G = nx.DiGraph()
+    i_neg = 0
+    i_pos = 0
+    for node in unique_nodes:
+        if node > 0:
+            G.add_node(node, pos=(1, i_pos ))
+            i_pos += 2
+        elif node < 0:
+            G.add_node(node, pos=(0, i_neg))
+            i_neg += 2
+        else:
+            G.add_node(node, pos=(2, 5))
+
+    for node in list_of_nodes:
+        G.add_edge(node[0], node[1], weight=node[2])
+
+    # positions of the nodes
+    pos = nx.get_node_attributes(G, 'pos')
+
+    # color the arrows
+    edge_colors = ['r' if G[u][v]['weight'] < 0 else 'g' for u,v in G.edges()]
+    # green for input nodes, yellow for hidden nodes, red for output nodes
+    node_colors = ['gray' if node < 0 else 'y' if node > 0 else 'pink' for node in G.nodes()]
+
+    # add legend to plot
+    red_patch = mpatches.Patch(color='red', label='Negative weights')
+    green_patch = mpatches.Patch(color='green', label='Positive weights')
+    gray_patch = mpatches.Patch(color='gray', label='Input nodes')
+    yellow_patch = mpatches.Patch(color='yellow', label='Hidden nodes')
+    pink_patch = mpatches.Patch(color='pink', label='Output nodes')
+
+    plt.legend(handles=[red_patch, green_patch, gray_patch, yellow_patch, pink_patch])
+
+    # weights of the edges
+    weights = nx.get_edge_attributes(G, 'weight')
+    # draw the graph
+    nx.draw(G, pos, with_labels=True, node_color=node_colors, edge_color=edge_colors, node_size=500, arrows=True)
+    # draw the weights
+    #nx.draw_networkx_edge_labels(G, pos, edge_labels=weights)
+    plt.show()
+
+def calculate_metrics(winner_net, inputs, outputs):
+    '''
+    calculate metrics for winner net    
+    '''
+    TP = 0
+    TN = 0
+    FP = 0
+    FN = 0
+    for xi, xo in zip(inputs, outputs):
+        output = winner_net.activate(xi)
+        output = 1 if output[0] > 0.5 else 0
+        #print("input {!r}, expected output {!r}, got {!r}".format(xi, xo, output))    
+        if output == 1 and xo == 1:
+            TP += 1
+        elif output == 0 and xo == 0:
+            TN += 1
+        elif output == 1 and xo == 0:
+            FP += 1
+        elif output == 0 and xo == 1:
+            FN += 1
+
+    accuracy = (TP + TN) / (TP + TN + FP + FN)
+    precision = TP / (TP + FP)
+    IoU = TP / (TP + FP + FN)
+
+    print("TP: ", TP)
+    print("TN: ", TN)
+    print("FP: ", FP)
+    print("FN: ", FN)
+    print("accuracy: ", accuracy)
+    print("precision: ", precision)
+    print("IoU: ", IoU)
+
+def launch(generations = 300, reporter = False, checkpoint = False):
+    '''
+    launch NEAT algorithm
+    '''
+    p = neat.Population(config)
+    # Add a stdout reporter to show progress in the terminal.
+    if (reporter):
+        p.add_reporter(neat.StdOutReporter(True))
+    stats = neat.StatisticsReporter()
+    p.add_reporter(stats)
+    if (checkpoint):
+        p.add_reporter(neat.Checkpointer(5))
+    winner = p.run(eval_genomes, 300)
+    # Display the winning genome.
+    print('Best genome:\n{!s}'.format(winner))
+    winner_net = neat.nn.FeedForwardNetwork.create(winner, config)
+    calculate_metrics(winner_net, inputs, outputs)
+    #visualize.draw_net(config, winner, True, node_names=node_names)
+    visualize.plot_stats(stats, ylog=False, view=True)
+    return winner
+
+def save_model(model, path):
+    '''
+    save model using pickle
+    '''
+    with open(path, 'wb') as output:
+        pickle.dump(model, output, pickle.HIGHEST_PROTOCOL)
+
+def load_model(path):
+    '''
+    load model using pickle
+    '''
+    with open(path, 'rb') as input:
+        model = pickle.load(input)
+    return model
+        
+    
+        
+\end{lstlisting}
