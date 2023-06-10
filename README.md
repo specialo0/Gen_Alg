@@ -27,7 +27,7 @@
 В случае необходимости изменения параметров алгоритма NEAT, необходимо изменить конфигурационный файл, представленный в этом репозитории.
 
 ## Описание датасета
-Для работы алгоритма NEAT использован 1.	Heart Attack Analysis & Prediction Dataset, который представлен на сайте <a href="https://www.kaggle.com/datasets/rashikrahmanpritom/heart-attack-analysis-prediction-dataset">Kaggle</a>. Датасет содержит 303 записи, каждая из которых содержит 13 признаков и 1 целевую переменную. Однако, во избежание чрезмерной изменчивости фенотипов особей в ходе работы алгоритма, набор данных был сокращен на 4 признака (trtbps, chol, fbs, rest_ecg) на основании матрицы корреляции по критерию Пирсона (<0.2). Оригинальные признаки:
+Для работы алгоритма NEAT использован Heart Attack Analysis & Prediction Dataset, который представлен на сайте <a href="https://www.kaggle.com/datasets/rashikrahmanpritom/heart-attack-analysis-prediction-dataset">Kaggle</a>. Датасет содержит 303 записи, каждая из которых содержит 13 признаков и 1 целевую переменную. Однако, во избежание чрезмерной изменчивости фенотипов особей в ходе работы алгоритма, набор данных был сокращен на 4 признака (trtbps, chol, fbs, rest_ecg) на основании матрицы корреляции по критерию Пирсона (<0.2). Оригинальные признаки:
 * Age : Age of the patient
 * Sex : Sex of the patient
 * exang: exercise induced angina (1 = yes; 0 = no)
